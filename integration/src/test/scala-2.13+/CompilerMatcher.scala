@@ -40,6 +40,7 @@ class Holder {
 trait CompilerMatcher {
   private lazy val bootPathList = List(jarPathOfClass("scala.tools.nsc.Main"),
                                    jarPathOfClass("scala.Option"),
+                                   jarPathOfClass("javax.xml.bind.DatatypeConverter"),
                                    jarPathOfClass("scala.xml.Elem"),
                                    jarPathOfClass("scala.util.parsing.combinator.Parsers"))
 

@@ -36,14 +36,13 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file("."))
   .aggregate(app, integration, scalaxbPlugin)
   .settings(nocomma {
-    scalaVersion := scala211
+    scalaVersion := scala212
     publish / skip := true
     crossScalaVersions := Nil
     commands += Command.command("release") { state =>
       "clean" ::
         "+app/publishSigned" ::
-        "++2.10.7!;scalaxbPlugin/publishSigned" ::
-        "++2.12.12!;scalaxbPlugin/publishSigned" ::
+        "++2.12.18!;scalaxbPlugin/publishSigned" ::
         state
     }
   })
@@ -54,10 +53,13 @@ lazy val app = (project in file("cli"))
   .settings(codegenSettings)
   .settings(nocomma {
     name := "scalaxb"
-    crossScalaVersions := Seq(scala213, scala212, scala211, scala210)
+    crossScalaVersions := Seq(scala213, scala212)
     scalaVersion := scala212
     resolvers += sbtResolver.value
     libraryDependencies ++= appDependencies(scalaVersion.value)
+    libraryDependencies += "javax.xml.bind" % "jaxb-api" % "2.3.1"
+    libraryDependencies += "org.glassfish.jaxb" % "jaxb-runtime" % "2.3.2"
+    libraryDependencies += "org.glassfish.jaxb" % "jaxb-core" % "2.3.0.1"
     scalacOptions := {
       val prev = scalacOptions.value
       if (scalaVersion.value == scala212) {
@@ -78,6 +80,7 @@ lazy val integration = (project in file("integration"))
     scalaVersion := scala212
     publishArtifact := false
     libraryDependencies ++= integrationDependencies(scalaVersion.value)
+    libraryDependencies += "javax.xml.bind" % "jaxb-api" % "2.3.1"
     // fork in test := true,
     // javaOptions in test ++= Seq("-Xmx2G", "-XX:MaxPermSize=512M")
     Test / parallelExecution := false
@@ -92,14 +95,8 @@ lazy val scalaxbPlugin = (project in file("sbt-scalaxb"))
   .settings(nocomma {
     name := "sbt-scalaxb"
     description := """sbt plugin to run scalaxb"""
-    pluginCrossBuild / sbtVersion := {
-      scalaBinaryVersion.value match {
-        case "2.10" => "0.13.18"
-        case "2.12" => "1.2.8" // set minimum sbt version
-      }
-    }
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
-      Seq("-Xmx1024M", "-XX:MaxPermSize=256M", "-Dplugin.version=" + version.value)
+      Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     }
     scriptedBufferLog := false
     scripted := scripted.dependsOn(app / publishLocal).evaluated
