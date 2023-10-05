@@ -1,6 +1,7 @@
 import Dependencies._
 import Common._
 
+ThisBuild / conflictWarning := ConflictWarning("warn", Level.Warn, false)
 ThisBuild / version := "1.10.1-SNAPSHOT"
 ThisBuild / organization := "org.scalaxb"
 ThisBuild / homepage := Option(url("http://scalaxb.org"))
@@ -19,16 +20,24 @@ ThisBuild / developers := List(
 )
 
 lazy val commonSettings = Seq(
-    scalacOptions := Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-language:postfixOps"),
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:implicitConversions", "-language:postfixOps"),
+    scalacOptions ++= Seq("-Wconf:msg=ListMap:silent"),
+    scalacOptions ++= Seq("-Wconf:msg=Line is indented too far:error"),
     Test / parallelExecution := false,
     resolvers += Resolver.typesafeIvyRepo("releases"),
     // Adds a `src/test/scala-2.13+` source directory for Scala 2.13 and newer
     // and a `src/test/scala-2.13-` source directory for Scala version older than 2.13
-    Test / unmanagedSourceDirectories += {
+    Test / unmanagedSourceDirectories ++= {
       val sourceDir = (Test / sourceDirectory).value
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
-        case _                       => sourceDir / "scala-2.13-"
+        case Some((2, n)) =>
+          if (n >= 13) {
+            Seq(sourceDir / "scala-2.13+")
+          } else {
+            Seq(sourceDir / "scala-2.13-")
+          }
+        case _ =>
+          Nil
       }
     }
   ) ++ sonatypeSettings
@@ -55,7 +64,7 @@ lazy val app = (project in file("cli"))
   .settings(nocomma {
     name := "scalaxb"
     crossScalaVersions := Seq(scala3, scala213, scala212, scala211, scala210)
-    scalaVersion := scala212
+    scalaVersion := "3.3.1"
     resolvers += sbtResolver.value
     libraryDependencies ++= appDependencies(scalaVersion.value)
     scalacOptions := {
@@ -75,7 +84,7 @@ lazy val integration = (project in file("integration"))
   .settings(commonSettings)
   .settings(nocomma {
     crossScalaVersions := Seq(scala212, scala213)
-    scalaVersion := scala212
+    scalaVersion := "3.3.1"
     publishArtifact := false
     libraryDependencies ++= integrationDependencies(scalaVersion.value)
     // fork in test := true,
