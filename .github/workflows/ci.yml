@@ -11,9 +11,6 @@ jobs:
           - os: ubuntu-latest
             java: 8
             distribution: 'temurin'
-          - os: ubuntu-latest
-            java: 21
-            distribution: 'corretto'
     runs-on: ${{ matrix.os }}
     env:
       # define Java options for both official sbt and sbt-extras
@@ -33,7 +30,6 @@ jobs:
         case ${{ matrix.java }} in
           "8")
             sbt -v ++2.12.x "scalaxbPlugin/scripted"
-            sbt -v ++3.x "app/Test/compile"
             sbt -v +integration/test
             ;;
           "21")

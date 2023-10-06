@@ -23,3 +23,7 @@ class SbtApp extends xsbti.AppMain {
 
   case class Exit(val code: Int) extends xsbti.Exit
 }
+
+object AAAAA {
+  implicit class A(private val a: Int) extends AnyVal
+}
