@@ -49,6 +49,7 @@ lazy val root = (project in file("."))
 
 lazy val app = (project in file("cli"))
   .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(ScalaxbPlugin)
   .settings(commonSettings)
   .settings(codegenSettings)
   .settings(nocomma {
