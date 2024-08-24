@@ -86,7 +86,7 @@ trait XMLOutput extends Args {
   }
   
   def buildAttributeString(any: AnyAttributeDecl): String =
-    "__obj." + makeParamName(ATTRS_PARAM, false) + ".toList map {" + newline +
+    "__obj." + makeParamName(ATTRS_PARAM, false) + ".toList.map {" + newline +
     indent(4) + "case (key, x) => attr = scala.xml.Attribute((x.namespace map { __scope.getPrefix(_) }).orNull, x.key.orNull, x.value.toString, attr) }"
     
   def buildAttributeString(attr: AttributeDecl): String = {
@@ -95,7 +95,7 @@ trait XMLOutput extends Args {
     val name = "__obj." + makeParamName(buildParam(attr).name, true)
     
     if (toCardinality(attr) == Optional)
-      name + " foreach { x => attr = scala.xml.Attribute(" + namespaceString + ", " + quote(attr.name) +
+      name + ".foreach { x => attr = scala.xml.Attribute(" + namespaceString + ", " + quote(attr.name) +
         ", " + buildToString("x", attr.typeSymbol) + ", attr) }"
     else attr.defaultValue match {
       case Some(x) =>

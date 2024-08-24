@@ -88,6 +88,25 @@ case class Config(items: Map[String, ConfigEntry]) {
   def enumNameMaxLength: Int = (get[EnumNameMaxLength] getOrElse defaultEnumNameMaxLength).value
   def useLists: Boolean = values contains UseLists
   def jaxbPackage = get[JaxbPackage] getOrElse defaultJaxbPackage
+  def targetScalaVersion: String = get[TargetScalaVersion].getOrElse(defaultTargetScalaVersion).value
+  def targetScalaPartialVersion: Option[(Long, Long)] =
+    partialVersion(targetScalaVersion)
+  private val longPattern = """\d{1,19}"""
+  private val PartialVersion = raw"""($longPattern)\.($longPattern)(?:\..+)?""".r
+  private def partialVersion(s: String): Option[(Long, Long)] =
+    s match {
+      case PartialVersion(major, minor) => Some((major.toLong, minor.toLong))
+      case _                            => None
+    }
+  def isScala3Plus: Boolean = targetScalaPartialVersion match {
+    case Some((major, _)) => major >= 3
+    case _                => false
+  }
+  def isScala3_4Plus: Boolean = targetScalaPartialVersion match {
+    case Some((3, minor)) => minor >= 4
+    case Some((major, _)) => major > 3
+    case _                => false
+  }
 
   private def get[A <: ConfigEntry: ClassTag]: Option[A] =
     items.get(implicitly[ClassTag[A]].runtimeClass.getName).asInstanceOf[Option[A]]
@@ -118,6 +137,7 @@ object Config {
   val defaultSymbolEncodingStrategy = SymbolEncoding.Legacy151
   val defaultEnumNameMaxLength = EnumNameMaxLength(50)
   val defaultJaxbPackage = JaxbPackage.Javax
+  val defaultTargetScalaVersion = TargetScalaVersion("2.13.14")
 
   val default = Config(
     Vector(defaultPackageNames, defaultOpOutputWrapperPostfix, defaultOutdir,
@@ -169,6 +189,7 @@ object ConfigEntry {
   case class EnumNameMaxLength(value: Int) extends ConfigEntry
   case object UseLists extends ConfigEntry
   case object GenerateMapK extends ConfigEntry
+  case class TargetScalaVersion(value: String) extends ConfigEntry
 
   sealed abstract class HttpClientStyle extends ConfigEntry with Product with Serializable {
     final override def name: String = classOf[HttpClientStyle].getName

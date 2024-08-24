@@ -624,7 +624,7 @@ object DataRecord extends XMLStandardTypes {
 }
 
 case class ElemName(namespace: Option[String], name: String) {
-  var node: scala.xml.Node = _
+  var node: scala.xml.Node = null
   def text = node.text
   def nil = Helper.isNil(node)
   def nilOption: Option[ElemName] = if (nil) None else Some(this)
@@ -799,11 +799,11 @@ trait ElemNameParser[A] extends AnyElemNameParser with XMLFormat[A] with CanWrit
   }
 
   private def parserErrorMsg(msg: String, next: scala.util.parsing.input.Reader[Elem], stack: List[ElemName]): String =
-    if (msg contains "parser error ") msg
+    if (msg.contains("parser error ")) msg
     else "parser error \"" + msg + "\" while parsing " + stack.reverse.mkString("/", "/", "/") + next.pos.longString
 
   private def parserErrorMsg(msg: String, node: scala.xml.Node): String =
-    if (msg contains "parser error ") msg
+    if (msg.contains("parser error ")) msg
     else "parser error \"" + msg + "\" while parsing " + node.toString
 
   def parser(node: scala.xml.Node, stack: List[ElemName]): Parser[A]
@@ -963,11 +963,11 @@ object Helper {
   }
 
   def splitQName(value: String, scope: scala.xml.NamespaceBinding): (Option[String], String) =
-    if (value startsWith "{") {
+    if (value.startsWith("{")) {
       val qname = javax.xml.namespace.QName.valueOf(value)
       (nullOrEmpty(qname.getNamespaceURI), qname.getLocalPart)
     }
-    else if (value contains ':') {
+    else if (value.contains(':')) {
       val prefix = value.dropRight(value.length - value.indexOf(':'))
       val localPart = value.drop(value.indexOf(':') + 1)
       (nullOrEmpty(scope.getURI(prefix)), localPart)

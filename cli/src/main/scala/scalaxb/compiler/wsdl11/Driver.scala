@@ -198,11 +198,12 @@ class Driver extends Module { driver =>
     }
   }
 
-  def generateDispatchFromResource[To](style: HttpClientStyle, filePrefix: String)(implicit evTo: CanBeWriter[To]): List[To] = {
+  def generateDispatchFromResource[To](style: HttpClientStyle, filePrefix: String, config: Config)(implicit evTo: CanBeWriter[To]): List[To] = {
     def gen(asyncSuffix: String) = generateFromResource[To](
       Some("scalaxb"),
       s"httpclients_dispatch${asyncSuffix}.scala",
-      s"${filePrefix}${asyncSuffix}.scala.template"
+      s"${filePrefix}${asyncSuffix}.scala.template",
+      config,
     )
     style match {
       case HttpClientStyle.Sync => gen("") :: Nil
@@ -212,83 +213,83 @@ class Driver extends Module { driver =>
   }
 
   def generateRuntimeFiles[To](cntxt: Context, config: Config)(implicit evTo: CanBeWriter[To]): List[To] =
+    generateBaseRuntimeFiles[To](cntxt, config) ++
     List(
-      generateFromResource[To](Some("scalaxb"), "scalaxb.scala", "/scalaxb.scala.template", Some("%%JAXB_PACKAGE%%" -> config.jaxbPackage.packageName)),
       (config.httpClientStyle match {
-        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "httpclients.scala", "/httpclients.scala.template")
-        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "httpclients_async.scala", "/httpclients_async.scala.template")
-        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "httpclients_tagless_final.scala", "/httpclients_tagless_final.scala.template")
+        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "httpclients.scala", "/httpclients.scala.template", config)
+        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "httpclients_async.scala", "/httpclients_async.scala.template", config)
+        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "httpclients_tagless_final.scala", "/httpclients_tagless_final.scala.template", config)
       })) ++
     (if (config.generateDispatchAs) List(generateFromResource[To](Some("dispatch.as"), "dispatch_as_scalaxb.scala",
-        "/dispatch_as_scalaxb.scala.template"))
+        "/dispatch_as_scalaxb.scala.template", config))
      else Nil) ++
-    (if (config.generateVisitor) List(generateFromResource[To](Some("scalaxb"), "Visitor.scala", "/visitor.scala.template"))
+    (if (config.generateVisitor) List(generateFromResource[To](Some("scalaxb"), "Visitor.scala", "/visitor.scala.template", config))
      else Nil) ++
     (if (config.generateDispatchClient) (config.dispatchVersion, config.httpClientStyle) match {
       case (VersionPattern(0, minor, _), style) if minor < 10   =>
-        generateDispatchFromResource(style, "/httpclients_dispatch_classic")
+        generateDispatchFromResource(style, "/httpclients_dispatch_classic", config)
 
       case (VersionPattern(0, 10 | 11, 0), style)               =>
-        generateDispatchFromResource(style, "/httpclients_dispatch0100")
+        generateDispatchFromResource(style, "/httpclients_dispatch0100", config)
 
       case (VersionPattern(0, 11, 1 | 2), style)                =>
-        generateDispatchFromResource(style, "/httpclients_dispatch0111")
+        generateDispatchFromResource(style, "/httpclients_dispatch0111", config)
 
       case (VersionPattern(0, 11, 3 | 4), style)                =>
-        generateDispatchFromResource(style, "/httpclients_dispatch0113")
+        generateDispatchFromResource(style, "/httpclients_dispatch0113", config)
 
       case (VersionPattern(0, 12, 0 | 1), style)                => // 0.12.1 does not have artifact in maven central
         // 0.12.[0, 1] is using same template as 0.11.3+
-        generateDispatchFromResource(style, "/httpclients_dispatch0113")
+        generateDispatchFromResource(style, "/httpclients_dispatch0113", config)
 
       case (VersionPattern(0, 12, _), style)                    =>
-        generateDispatchFromResource(style, "/httpclients_dispatch0122")
+        generateDispatchFromResource(style, "/httpclients_dispatch0122", config)
 
       case (VersionPattern(0, 13, _), style)                    =>
-        generateDispatchFromResource(style, "/httpclients_dispatch0130")
+        generateDispatchFromResource(style, "/httpclients_dispatch0130", config)
 
       case (VersionPattern(0, 14, _), style)                    =>
         // Same as 0.13.x
-        generateDispatchFromResource(style, "/httpclients_dispatch0130")
+        generateDispatchFromResource(style, "/httpclients_dispatch0130", config)
       case (VersionPattern(1, 0 | 1, _), style)                    =>
         // Same as 0.13.x
-        generateDispatchFromResource(style, "/httpclients_dispatch0130")
+        generateDispatchFromResource(style, "/httpclients_dispatch0130", config)
     } else Nil) ++
     (if (config.generateGigahorseClient) (config.gigahorseVersion, config.httpClientStyle) match {
       case (VersionPattern(x, y, _), HttpClientStyle.Sync) if (x.toInt == 0) && (y.toInt <= 5) =>
         generateFromResource[To](Some("scalaxb"), "httpclients_gigahorse.scala",
-          "/httpclients_gigahorse02.scala.template", Some("%%BACKEND%%" -> config.gigahorseBackend)) :: Nil
+          "/httpclients_gigahorse02.scala.template", config, "%%BACKEND%%" -> config.gigahorseBackend) :: Nil
       case (VersionPattern(x, y, _), HttpClientStyle.Future) if (x.toInt == 0) && (y.toInt <= 5) =>
         generateFromResource[To](Some("scalaxb"), "httpclients_gigahorse_async.scala",
-          "/httpclients_gigahorse02_async.scala.template", Some("%%BACKEND%%" -> config.gigahorseBackend)) :: Nil
-      case _ => Nil  
+          "/httpclients_gigahorse02_async.scala.template", config, "%%BACKEND%%" -> config.gigahorseBackend) :: Nil
+      case _ => Nil
     } else Nil) ++
     (if (config.generateHttp4sClient && config.httpClientStyle == HttpClientStyle.Tagless) config.http4sVersion match {
-       case VersionPattern(0,21, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_21.scala.template"))
-       case VersionPattern(0,22, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_22.scala.template"))
-       case VersionPattern(0,23, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_23.scala.template"))
+       case VersionPattern(0,21, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_21.scala.template", config))
+       case VersionPattern(0,22, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_22.scala.template", config))
+       case VersionPattern(0,23, _) => List(generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala", "/httpclients_http4s_0_23.scala.template", config))
        case _ => sys.error(s"Unsupported http4s version ${config.http4sVersion}"); Nil
       }
     else Nil) ++
     (if (cntxt.soap11) List(
       (config.httpClientStyle match {
-        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "soap11.scala", "/soap11.scala.template")
-        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "soap11_async.scala", "/soap11_async.scala.template")
-        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "soap11_tagless.scala", "/soap11_tagless.scala.template")
+        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "soap11.scala", "/soap11.scala.template", config)
+        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "soap11_async.scala", "/soap11_async.scala.template", config)
+        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "soap11_tagless.scala", "/soap11_tagless.scala.template", config)
       }),
       generateFromResource[To](Some("soapenvelope11"), "soapenvelope11.scala",
-        "/soapenvelope11.scala.template"),
+        "/soapenvelope11.scala.template", config),
       generateFromResource[To](Some("soapenvelope11"), "soapenvelope11_xmlprotocol.scala",
-        "/soapenvelope11_xmlprotocol.scala.template"))
+        "/soapenvelope11_xmlprotocol.scala.template", config))
     else Nil) ++
     (if (cntxt.soap12) List(
       (config.httpClientStyle match {
-        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "soap12.scala", "/soap12.scala.template")
-        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "soap12_async.scala", "/soap12_async.scala.template")
-        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "soap12_tagless.scala", "/soap12_tagless.scala.template")
+        case HttpClientStyle.Sync => generateFromResource[To](Some("scalaxb"), "soap12.scala", "/soap12.scala.template", config)
+        case HttpClientStyle.Future => generateFromResource[To](Some("scalaxb"), "soap12_async.scala", "/soap12_async.scala.template", config)
+        case HttpClientStyle.Tagless => generateFromResource[To](Some("scalaxb"), "soap12_tagless.scala", "/soap12_tagless.scala.template", config)
       }),
-      generateFromResource[To](Some("soapenvelope12"), "soapenvelope12.scala", "/soapenvelope12.scala.template"),
-      generateFromResource[To](Some("soapenvelope12"), "soapenvelope12_xmlprotocol.scala", "/soapenvelope12_xmlprotocol.scala.template"))
+      generateFromResource[To](Some("soapenvelope12"), "soapenvelope12.scala", "/soapenvelope12.scala.template", config),
+      generateFromResource[To](Some("soapenvelope12"), "soapenvelope12_xmlprotocol.scala", "/soapenvelope12_xmlprotocol.scala.template", config))
     else Nil)
 }
 

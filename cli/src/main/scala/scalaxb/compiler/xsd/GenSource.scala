@@ -584,8 +584,8 @@ class GenSource(val schema: SchemaDecl,
       }
     val paramsString = paramList.map(
       _.toScalaCode_possiblyMutable).mkString("," + newline + indent(1))
-    val argsString = argList.mkString("," + newline + indent(3))  
-    val attributeString = attributes.map(x => buildAttributeString(x)).mkString(newline + indent(2))
+    val argsString = argList.mkString("," + newline + indent(3))
+    val attributeString = attributes.map(x => buildAttributeString(x)).mkString(newline + indent(3))
     
     val caseClassCode = <source>{ buildComment(group) }case class {localName}({paramsString})</source>
     val defaultFormats = <source>  trait Default{formatterName} extends scalaxb.AttributeGroupFormat[{fqn}] {{

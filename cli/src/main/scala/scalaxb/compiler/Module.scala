@@ -313,7 +313,7 @@ trait Module {
           val output = evTo.newInstance(pkg, part + ".scala")
           val out = evTo.toWriter(output)
           try {
-            printNodes(snippet.definition, out)
+            printNodes(snippet.definition, out, config)
           } finally {
             out.flush()
             out.close()
@@ -336,7 +336,7 @@ trait Module {
         }))
       val protocolNodes = generateProtocol(Snippet(snippets.toSeq: _*), cs.context, config2)
       try {
-        printNodes(protocolNodes, out)
+        printNodes(protocolNodes, out, config2)
       } finally {
         out.flush()
         out.close()
@@ -355,17 +355,63 @@ trait Module {
      else Nil)
   }
 
-  def generateFromResource[To](packageName: Option[String], fileName: String, resourcePath: String, substitution: Option[(String, String)] = None)
-                              (implicit evTo: CanBeWriter[To]) = {
+  def substituteMany(subs: (String, String)*): String => String =
+    (s: String) => subs.toSeq.foldLeft(s)((acc, x) => acc.replaceAll(x._1, x._2))
+
+  private val scala3VarArgSub = """\:\s_\*""" -> "*"
+  private val scala3With = """scalaxb\.(\S+)\swith\sscalaxb\.(\S+)""" -> """scalaxb.$1 & scalaxb.$2"""
+
+  def printNodes(nodes: Seq[Node], out: PrintWriter, config: Config): Unit = {
+    val subs = ListBuffer.empty[(String, String)]
+    if (config.isScala3_4Plus) {
+      subs += scala3VarArgSub
+      subs += scala3With
+      printNodes(nodes, out, substituteMany(subs.toList: _*))
+    } else {
+      printNodes(nodes, out)
+    }
+  }
+
+  def generateFromResource[To](
+    packageName: Option[String],
+    fileName: String,
+    resourcePath: String,
+    config: Config,
+    subs0: (String, String)*
+  )(implicit evTo: CanBeWriter[To]): To = {
     val output = implicitly[CanBeWriter[To]].newInstance(packageName, fileName)
     val out = implicitly[CanBeWriter[To]].toWriter(output)
     try {
-      printFromResource(resourcePath, out, substitution)
+      val subs = ListBuffer.empty[(String, String)]
+      subs ++= subs0
+      if (config.isScala3_4Plus) {
+        subs += scala3VarArgSub
+      }
+      val transform = substituteMany(subs.toList: _*)
+      printFromResource(resourcePath, out, transform)
     } finally {
       out.flush()
       out.close()
     }
     output
+  }
+
+  def generateBaseRuntimeFiles[To](cntxt: Context, config: Config)(implicit evTo: CanBeWriter[To]): List[To] = {
+    val subs = ListBuffer.empty[(String, String)]
+    subs += "%%JAXB_PACKAGE%%" -> config.jaxbPackage.packageName
+    if (config.isScala3Plus) {
+      subs += """CanWriteXML\[_\]""" -> "CanWriteXML[?]"
+    }
+
+    List(
+      generateFromResource[To](
+        Some("scalaxb"),
+        "scalaxb.scala",
+        "/scalaxb.scala.template",
+        config,
+        subs.toList: _*,
+      ),
+    )
   }
 
   def generateRuntimeFiles[To](context: Context, config: Config)(implicit evTo: CanBeWriter[To]): List[To]
@@ -432,17 +478,17 @@ trait Module {
   def parse(location: URI, in: Reader): Schema
     = parse(toImportable(location, readerToRawSchema(in)), buildContext)
 
-  def printNodes(nodes: Seq[Node], out: PrintWriter): Unit = {
-    import scala.xml._
+  def printNodes(nodes: Seq[Node], out: PrintWriter, transform: String => String = identity): Unit = {
+    import scala.xml.{ transform => _, _ }
 
     def printNode(n: Node): Unit = n match {
-      case Text(s)          => out.print(s)
+      case Text(s)          => out.print(transform(s))
       case EntityRef("lt")  => out.print('<')
       case EntityRef("gt")  => out.print('>')
       case EntityRef("amp") => out.print('&')
-      case atom: Atom[_]    => out.print(atom.text)
+      case atom: Atom[_]    => out.print(transform(atom.text))
       case elem: Elem       =>
-        printNodes(elem.child, out)
+        printNodes(elem.child, out, transform)
         if (elem.text != "") {
           if (elem.text.contains(newline)) out.println("")
           out.println("")
@@ -454,25 +500,27 @@ trait Module {
     for (node <- nodes) { printNode(node) }
   }
 
-  def printFromResource(source: String, out: PrintWriter, substitution: Option[(String, String)] = None): Unit = {
+  def printFromResource(source: String, out: PrintWriter, transform: String => String = identity): Unit = {
     val in = getClass.getResourceAsStream(source)
-    val reader = new java.io.BufferedReader(new java.io.InputStreamReader(in))
-    var line: Option[String] = None
-    line = Option[String](reader.readLine)
-    while (line != None) {
-      (line, substitution) match {
-        case (Some(l), Some((target, replacement))) => out.println(l.replace(target, replacement))
-        case (Some(l), None) => out.println(l)
-        case _ => // do nothing
-      }
+    try {
+      val reader = new java.io.BufferedReader(new java.io.InputStreamReader(in))
+      var line: Option[String] = None
       line = Option[String](reader.readLine)
+      while (line != None) {
+        line match {
+          case Some(l) => out.println(transform(l))
+          case _       => // do nothing
+        }
+        line = Option[String](reader.readLine)
+      }
+    } finally {
+      in.close()
     }
-    in.close
     out.flush
   }
 
-  def copyFileFromResource(source: String, dest: File, substitution: Option[(String, String)] = None) =
-    printFromResource(source, new java.io.PrintWriter(new java.io.FileWriter(dest)), substitution)
+  def copyFileFromResource(source: String, dest: File, transform: String => String = identity) =
+    printFromResource(source, new java.io.PrintWriter(new java.io.FileWriter(dest)), transform)
 
   def mergeSnippets(snippets: Seq[Snippet]) =
     Snippet(snippets flatMap {_.definition},
