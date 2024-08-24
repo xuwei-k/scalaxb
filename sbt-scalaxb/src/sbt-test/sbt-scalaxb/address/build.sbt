@@ -28,12 +28,10 @@ lazy val root = (project in file(".")).
       "2.11.12",
       "2.12.18",
       "2.13.12",
-      "3.3.1",
+      "3.5.0",
     ),
     name := "mavenxsd",
     Compile / scalaxb / scalaxbAutoPackages := true,
     Compile / scalaxb / scalaxbGenerateMutable := true,
-    libraryDependencies ++= scalaXml.value,
-    libraryDependencies ++= scalaParser.value,
-    libraryDependencies += jaxbApi
+    libraryDependencies ++= scalaXml.value ++ scalaParser.value ++ Seq(jaxbApi),
   )

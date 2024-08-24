@@ -97,6 +97,7 @@ lazy val scalaxbPlugin = (project in file("sbt-scalaxb"))
         case "2.12" => "1.5.8" // set minimum sbt version
       }
     }
+    scriptedSbt := sbtVersion.value
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
       Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     }

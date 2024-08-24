@@ -156,6 +156,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
         Vector(EnumNameMaxLength(scalaxbEnumNameMaxLength.value)) ++
         (if (scalaxbMapK.value) Vector(GenerateMapK) else Vector()) ++
         (if (scalaxbUseLists.value) Vector(UseLists) else Vector()) ++
+        Vector(TargetScalaVersion(scalaVersion.value)) ++
         Vector(ConfigEntry.JaxbPackage.withPackageName(scalaxbJaxbPackage.value.toString)) ++
           Vector(scalaxbHttpClientStyle.value match {
             case HttpClientStyle.Sync => ConfigEntry.HttpClientStyle.Sync
