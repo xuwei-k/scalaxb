@@ -1,6 +1,6 @@
 package sbtscalaxb
 
-import sbt._
+import sbt.{given, _}
 import Keys._
 import scala.collection.immutable
 import scalaxb.{compiler => sc}
@@ -75,7 +75,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
       else src / "main" / "wsdl"
     },
     scalaxb / logLevel := (logLevel?? Level.Info).value
-  ) ++ inTask(scalaxb)(Seq(
+  ) ++ Project.inTask(scalaxb)(Seq(
     scalaxbGenerate := {
       val s = streams.value
       val ll = logLevel.value
@@ -84,11 +84,11 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
     sources := {
       val xsd = scalaxbXsdSource.value
       val wsdl = scalaxbWsdlSource.value
-      (wsdl ** "*.wsdl").get.sorted ++ (xsd ** "*.xsd").get.sorted
+      (wsdl ** "*.wsdl").get().sorted ++ (xsd ** "*.xsd").get().sorted
     },
     clean := {
       val outdir = sourceManaged.value
-      IO.delete((outdir ** "*").get)
+      IO.delete((outdir ** "*").get())
       IO.createDirectory(outdir)
     },
     scalaxbCombinedPackageNames := {
