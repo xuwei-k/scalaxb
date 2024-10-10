@@ -37,7 +37,7 @@ lazy val root = (project in file("."))
   .aggregate(app, integration, scalaxbPlugin)
   .settings(nocomma {
     name := "scalaxb-root"
-    scalaVersion := scala212
+    scalaVersion := scala3
     publish / skip := true
     crossScalaVersions := Nil
     commands += Command.command("release") { state =>
@@ -54,8 +54,8 @@ lazy val app = (project in file("cli"))
   .settings(codegenSettings)
   .settings(nocomma {
     name := "scalaxb"
-    crossScalaVersions := Seq(scala3, scala213, scala212)
-    scalaVersion := scala212
+    crossScalaVersions := Seq(scala213, scala212)
+    scalaVersion := scala3
     resolvers += sbtResolver.value
     libraryDependencies ++= appDependencies(scalaVersion.value)
     scalacOptions := {
@@ -75,7 +75,7 @@ lazy val integration = (project in file("integration"))
   .settings(commonSettings)
   .settings(nocomma {
     crossScalaVersions := Seq(scala212, scala213)
-    scalaVersion := scala212
+    scalaVersion := scala3
     publishArtifact := false
     libraryDependencies ++= integrationDependencies(scalaVersion.value)
     // fork in test := true,
@@ -95,10 +95,11 @@ lazy val scalaxbPlugin = (project in file("sbt-scalaxb"))
     pluginCrossBuild / sbtVersion := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8" // set minimum sbt version
-        case _ => "2.0.0-M2"
+        case _ => "2.0.0-M3"
       }
     }
-    crossScalaVersions += scala3
+    crossScalaVersions := Seq(scala212, "3.6.2")
+    scalaVersion := "3.6.2"
     scriptedLaunchOpts := { scriptedLaunchOpts.value ++
       Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
     }

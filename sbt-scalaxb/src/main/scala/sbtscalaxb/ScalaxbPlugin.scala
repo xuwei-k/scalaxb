@@ -2,7 +2,6 @@ package sbtscalaxb
 
 import sbt.{given, _}
 import Keys._
-import scala.collection.immutable
 import scalaxb.{compiler => sc}
 import scalaxb.compiler.{Config => ScConfig}
 import sc.ConfigEntry
@@ -13,9 +12,9 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
 
   object autoImport extends ScalaxbKeys
   import autoImport._
-  override lazy val globalSettings: Seq[Def.Setting[_]] = Seq(
+  override lazy val globalSettings: Seq[Def.Setting[_]] = Seq[Setting[_]](
     scalaxbPackageName             := "generated",
-    scalaxbPackageNames            := Map(),
+    scalaxbPackageNames            := Map.empty,
     scalaxbClassPrefix             := None,
     scalaxbParamPrefix             := None,
     scalaxbAttributePrefix         := None,
@@ -59,7 +58,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
     Set(
       Compile / sourceGenerators += (Compile / scalaxb).taskValue
     )
-  lazy val baseScalaxbSettings: Seq[Def.Setting[_]] = Seq(
+  lazy val baseScalaxbSettings: Seq[Def.Setting[_]] = Seq[Setting[_]](
     scalaxb := (scalaxb / scalaxbGenerate).value,
     scalaxb / sourceManaged := {
       sourceManaged.value / "sbt-scalaxb"
@@ -75,7 +74,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
       else src / "main" / "wsdl"
     },
     scalaxb / logLevel := (logLevel?? Level.Info).value
-  ) ++ Project.inTask(scalaxb)(Seq(
+  ) ++ Project.inTask(scalaxb)(Seq[Setting[_]](
     scalaxbGenerate := {
       val s = streams.value
       val ll = logLevel.value
@@ -105,63 +104,69 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
           else HttpClientStyle.Sync
       }
     },
-    scalaxbConfig :=
-      ScConfig(
-        Vector(PackageNames(scalaxbCombinedPackageNames.value)) ++
-        (if (scalaxbPackageDir.value) Vector(GeneratePackageDir) else Vector()) ++
-        (scalaxbClassPrefix.value match {
-          case Some(x) => Vector(ClassPrefix(x))
-          case None    => Vector()
-        }) ++
-        (scalaxbParamPrefix.value match {
-          case Some(x) => Vector(ParamPrefix(x))
-          case None    => Vector()
-        }) ++
-        (scalaxbAttributePrefix.value match {
-          case Some(x) => Vector(AttributePrefix(x))
-          case None    => Vector()
-        }) ++
-        Vector(OpOutputWrapperPostfix(scalaxbOpOutputWrapperPostfix.value)) ++
-        Vector(ScConfig.defaultOutdir) ++
-        (if (scalaxbPrependFamily.value) Vector(PrependFamilyName) else Vector()) ++
-        Vector(WrappedComplexTypes(scalaxbWrapContents.value.toList)) ++
-        Vector(SeperateProtocol) ++
-        Vector(ProtocolFileName(scalaxbProtocolFileName.value)) ++
-        Vector(ProtocolPackageName(scalaxbProtocolPackageName.value)) ++
-        Vector(ScConfig.defaultDefaultNamespace) ++
-        (if (scalaxbGenerateRuntime.value) Vector(GenerateRuntime) else Vector()) ++
-        (if (scalaxbGenerateDispatchClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
-          scalaxbGenerateSingleClient.value == HttpClientType.Dispatch) Vector(GenerateDispatchClient) else Vector()) ++
-        (if (scalaxbGenerateDispatchAs.value) Vector(GenerateDispatchAs) else Vector()) ++
-        (if (scalaxbGenerateGigahorseClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
-          scalaxbGenerateSingleClient.value == HttpClientType.Gigahorse) Vector(GenerateGigahorseClient) else Vector()) ++
-        (if (scalaxbGenerateHttp4sClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
-          scalaxbGenerateSingleClient.value == HttpClientType.Http4s) Vector(GenerateHttp4sClient, ConfigEntry.HttpClientStyle.Tagless) else Vector()) ++
-        Vector(ContentsSizeLimit(scalaxbContentsSizeLimit.value)) ++
-        Vector(SequenceChunkSize(scalaxbChunkSize.value)) ++
-        (if (scalaxbNamedAttributes.value) Vector(NamedAttributes) else Vector()) ++
-        (if (scalaxbLaxAny.value) Vector(LaxAny) else Vector()) ++
-        Vector(DispatchVersion(scalaxbDispatchVersion.value)) ++
-        Vector(Http4sVersion(scalaxbHttp4sVersion.value)) ++
-        Vector(GigahorseVersion(scalaxbGigahorseVersion.value)) ++
-        Vector(GigahorseBackend(scalaxbGigahorseBackend.value.toString)) ++
-        (if (scalaxbIgnoreUnknown.value) Vector(IgnoreUnknown) else Vector()) ++
-        (if (scalaxbVararg.value && !scalaxbGenerateMutable.value) Vector(VarArg) else Vector()) ++
-        (if (scalaxbGenerateMutable.value) Vector(GenerateMutable) else Vector()) ++
-        (if (scalaxbGenerateVisitor.value) Vector(GenerateVisitor) else Vector()) ++
-        (if (scalaxbGenerateLens.value) Vector(GenerateLens) else Vector()) ++
-        (if (scalaxbAutoPackages.value) Vector(AutoPackages) else Vector()) ++
-        (if (scalaxbCapitalizeWords.value) Vector(CapitalizeWords) else Vector()) ++
-        Vector(SymbolEncoding.withName(scalaxbSymbolEncodingStrategy.value.toString)) ++
-        Vector(EnumNameMaxLength(scalaxbEnumNameMaxLength.value)) ++
-        (if (scalaxbMapK.value) Vector(GenerateMapK) else Vector()) ++
-        (if (scalaxbUseLists.value) Vector(UseLists) else Vector()) ++
-        Vector(TargetScalaVersion(scalaVersion.value)) ++
-        Vector(ConfigEntry.JaxbPackage.withPackageName(scalaxbJaxbPackage.value.toString)) ++
-          Vector(scalaxbHttpClientStyle.value match {
-            case HttpClientStyle.Sync => ConfigEntry.HttpClientStyle.Sync
-            case HttpClientStyle.Future => ConfigEntry.HttpClientStyle.Future
-            case HttpClientStyle.Tagless => ConfigEntry.HttpClientStyle.Tagless
-          })
-  )))
+    scalaxbConfig := _root_.scalaxb.compiler.Config.apply {
+        val xxx = (
+          Vector[ConfigEntry](PackageNames(scalaxbCombinedPackageNames.value)) ++
+            (if (scalaxbPackageDir.value) Vector[ConfigEntry](GeneratePackageDir) else Vector[ConfigEntry]()) ++
+            (scalaxbClassPrefix.value match {
+              case Some(x) => Vector[ConfigEntry](ClassPrefix(x))
+              case None => Vector[ConfigEntry]()
+            }) ++
+            (scalaxbParamPrefix.value match {
+              case Some(x) => Vector[ConfigEntry](ParamPrefix(x))
+              case None => Vector[ConfigEntry]()
+            }) ++
+            (scalaxbAttributePrefix.value match {
+              case Some(x) => Vector[ConfigEntry](AttributePrefix(x))
+              case None => Vector[ConfigEntry]()
+            }) ++
+            Vector[ConfigEntry](OpOutputWrapperPostfix(scalaxbOpOutputWrapperPostfix.value)) ++
+            Vector[ConfigEntry](ScConfig.defaultOutdir) ++
+            (if (scalaxbPrependFamily.value) Vector[ConfigEntry](PrependFamilyName) else Vector[ConfigEntry]()) ++
+            Vector[ConfigEntry](WrappedComplexTypes(scalaxbWrapContents.value.toList)) ++
+            Vector[ConfigEntry](SeperateProtocol) ++
+            Vector[ConfigEntry](ProtocolFileName(scalaxbProtocolFileName.value)) ++
+            Vector[ConfigEntry](ProtocolPackageName(scalaxbProtocolPackageName.value)) ++
+            Vector[ConfigEntry](ScConfig.defaultDefaultNamespace) ++
+            (if (scalaxbGenerateRuntime.value) Vector[ConfigEntry](GenerateRuntime) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateDispatchClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
+              scalaxbGenerateSingleClient.value == HttpClientType.Dispatch) Vector[ConfigEntry](GenerateDispatchClient) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateDispatchAs.value) Vector[ConfigEntry](GenerateDispatchAs) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateGigahorseClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
+              scalaxbGenerateSingleClient.value == HttpClientType.Gigahorse) Vector[ConfigEntry](GenerateGigahorseClient) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateHttp4sClient.value && scalaxbGenerateSingleClient.value == HttpClientType.None ||
+              scalaxbGenerateSingleClient.value == HttpClientType.Http4s) Vector[ConfigEntry](GenerateHttp4sClient, ConfigEntry.HttpClientStyle.Tagless) else Vector[ConfigEntry]()) ++
+            Vector[ConfigEntry](ContentsSizeLimit(scalaxbContentsSizeLimit.value)) ++
+            Vector[ConfigEntry](SequenceChunkSize(scalaxbChunkSize.value)) ++
+            (if (scalaxbNamedAttributes.value) Vector[ConfigEntry](NamedAttributes) else Vector[ConfigEntry]()) ++
+            (if (scalaxbLaxAny.value) Vector[ConfigEntry](LaxAny) else Vector[ConfigEntry]()) ++
+            Vector[ConfigEntry](DispatchVersion(scalaxbDispatchVersion.value)) ++
+            Vector[ConfigEntry](Http4sVersion(scalaxbHttp4sVersion.value)) ++
+            Vector[ConfigEntry](GigahorseVersion(scalaxbGigahorseVersion.value)) ++
+            Vector[ConfigEntry](GigahorseBackend(scalaxbGigahorseBackend.value.toString)) ++
+            (if (scalaxbIgnoreUnknown.value) Vector[ConfigEntry](IgnoreUnknown) else Vector[ConfigEntry]()) ++
+            (if (scalaxbVararg.value && !scalaxbGenerateMutable.value) Vector[ConfigEntry](VarArg) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateMutable.value) Vector[ConfigEntry](GenerateMutable) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateVisitor.value) Vector[ConfigEntry](GenerateVisitor) else Vector[ConfigEntry]()) ++
+            (if (scalaxbGenerateLens.value) Vector[ConfigEntry](GenerateLens) else Vector[ConfigEntry]()) ++
+            (if (scalaxbAutoPackages.value) Vector[ConfigEntry](AutoPackages) else Vector[ConfigEntry]()) ++
+            (if (scalaxbCapitalizeWords.value) Vector[ConfigEntry](CapitalizeWords) else Vector[ConfigEntry]()) ++
+            Vector[ConfigEntry](SymbolEncoding.withName(scalaxbSymbolEncodingStrategy.value.toString)) ++
+            Vector[ConfigEntry](EnumNameMaxLength(scalaxbEnumNameMaxLength.value)) ++
+            (if (scalaxbMapK.value) Vector[ConfigEntry](GenerateMapK) else Vector[ConfigEntry]()) ++
+            (if (scalaxbUseLists.value) Vector[ConfigEntry](UseLists) else Vector[ConfigEntry]()) ++
+            Vector[ConfigEntry](TargetScalaVersion(scalaVersion.value)) ++
+            Vector[ConfigEntry](ConfigEntry.JaxbPackage.withPackageName(scalaxbJaxbPackage.value.toString)) ++
+            Vector[ConfigEntry](scalaxbHttpClientStyle.value match {
+              case HttpClientStyle.Sync => ConfigEntry.HttpClientStyle.Sync
+              case HttpClientStyle.Future => ConfigEntry.HttpClientStyle.Future
+              case HttpClientStyle.Tagless => ConfigEntry.HttpClientStyle.Tagless
+            })
+          )
+
+        xxx : Vector[ConfigEntry]
+
+        Vector.empty[ConfigEntry]
+      }
+  ))
 }
